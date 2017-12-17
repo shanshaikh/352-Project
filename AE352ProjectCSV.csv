@@ -1,0 +1,12 @@
+Body,Standard Graviational Parameter (km^2-s^-2),Radius of Body (km) ,Escape Velocity (km/s) 
+Sun,1.33E+11,695700,617.5
+Mercury,22203.2,2440,4.25
+Venus,3.25E+05,6052,10.36
+Earth,3.99E+05,6371,11.186
+Moon,4904.8695,1737,2.38
+Mars,42828.37,3390,5.03
+Jupiter,1.27E+08,69911,60.2
+Saturn,3.79E+07,58232,36.09
+Uranus ,5.79E+06,25362,21.38
+Neptune,6.84E+06,24622,23.56
+Pluto ,87.1,1187,1.23
