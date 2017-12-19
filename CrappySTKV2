@@ -1,0 +1,319 @@
+%% House Keeping
+
+clc ; clear ; close all
+
+%% Load File 
+
+file = 'AE352ProjectCSV.csv' ;      % load orbital parameters
+
+orbits = csvread( file , 1 , 1 );   % read orbital parameters
+
+%% Display and User Input
+
+options = [ ' 1.  Sun ' , ' 2. Mercury ' , ' 3. Venus ', ' 4. Earth ' , ...
+    ' 5. Moon ' , ' 6. Mars ' , ' 7. Jupiter ' , ' 8. Saturn ' , ' 9. Uranus  ' ...
+    , ' 10. Neptune ' , ' 11. Pluto ' ] ;
+
+disp(options) 
+
+% select orbiting body
+
+valid = false ;  
+while true 
+
+prompt = ' Select orbiting body number from above list : ' ; 
+
+body = input( prompt ) ;
+body = int8( body ) ;
+
+if isinteger(body) && body <= 11
+    valid = true ;
+end
+
+if valid 
+    break ;
+end
+
+disp( ' INPUT IS INVALID!!!!!! ' ) 
+disp( ' Please select a body from the list above ' )
+
+end
+
+orbit = orbits(body,:) ;
+
+% parse new orbit vector
+
+mu = orbit(1) ;     % km^3-s^-2   
+r = orbit(2) ;      % km
+ve = orbit(3) ;     % km/s
+
+% load texture
+
+
+switch body
+    case 1
+        planet = imread('Sun.jpg') ;
+    case 2
+        planet = imread('Mercury.jpg') ;
+    case 3
+        planet = imread('Venus.jpg') ;
+    case 4
+        planet =  imread('Earth.jpg') ;
+    case 5
+        planet = imread('Moon.jpg') ;
+    case 6
+        planet = imread('Mars.jpg') ; 
+    case 7
+        planet = imread('Jupiter.jpg') ;
+    case 8
+        planet = imread('Saturn.jpg') ;
+    case 9
+        planet = imread('Uranus.jpg') ;
+    case 10
+        planet = imread('Neptune.jpg') ; 
+    case 11
+        planet = imread('Pluto.jpg') ; 
+%     otherwise
+%         disp('You dun f*kced up')
+end
+% if body == 1 ; 
+%     planet = imread('Sun.jpg');
+% elseif
+
+% insert Delta vector
+
+valid = false ;  
+while true 
+
+prompt = ' Enter hyperbolic asymptote position : ' ; 
+
+Delta = input( prompt ) ;    
+
+if  ismatrix( Delta ) && norm( Delta ) > 1
+    valid = true ;
+end
+
+if valid 
+    break ;
+end
+
+
+end
+
+Delta = Delta * r ; 
+
+% Limit calculation
+
+vinflim = sqrt( ( 2 * mu * r ) / ( norm( Delta )^2  - r^2 )  ) ;
+
+rp = mu/(vinflim^2) * ( sqrt( 1 + ( norm( Delta ) * vinflim^2 / mu )^2 ) -1 ) ;
+
+% input hyperbolic excess
+
+valid = false ;  
+while true 
+
+prompt = strcat(' Enter hyperbolic excess velocity of at least magnitude = ' , num2str(vinflim) , ' : ' ) ; 
+
+vinf = input( prompt ) ;    % km/s
+
+if  vinf > vinflim
+    valid = true ;
+end
+
+if valid 
+    break ;
+end
+
+disp( ' INPUT IS INVALID !!!!!! ' )
+disp( ' Enter valid hyperbolic excess velocity ' ) 
+
+end
+
+% select angle
+
+valid = false ; 
+while true 
+
+prompt = ' Insert angle : ' ; 
+
+angle = input( prompt ) ;   % radians
+
+if 0 <= angle && angle < 2*pi
+    valid = true ;
+end
+
+if valid 
+    break ;
+end
+
+disp( ' INPUT IS INVALID !!!!!! ' )
+disp( ' Please enter angle between 0 and 2*pi ' )
+
+end
+
+% orbital elements
+
+a = - mu / vinf^2  ;
+
+e = sqrt( 1 + ( norm(Delta)^2/a^2 ) ) ;
+
+flim = acos( -1/e ) ; 
+
+valid = false ; 
+while true 
+
+prompt = strcat(' Input inital true anomaly < ' , num2str(flim) ,  ' : ' ) ; 
+
+f = input( prompt ) ;   % radians
+
+if f < flim
+    valid = true ;
+end
+
+if valid 
+    break ;
+end
+
+disp( ' INPUT IS INVALID !!!!!! ' )
+disp( ' Please enter a valid true anomaly ' )
+
+end
+
+f = linspace( -f , 0 , 1000 );
+
+%% Orbital Mechanics Mumbo Jumbo 
+
+X = [1; 0; 0];
+Y = [0; 1; 0];
+Z = [0; 0; 1];
+
+Delta_projxy = [Delta(1); Delta(2); 0];
+Angle1 = acos(dot (Delta_projxy, X)/(norm(Delta_projxy)));
+Angle2 = acos(dot (Delta, Delta_projxy)/(norm(Delta)*norm(Delta_projxy)));
+
+if Delta(2) < 0
+    Angle1 = 2*pi - Angle1;
+end
+if Delta(3) < 0
+    Angle2 = 2*pi - Angle2;
+end
+
+periapsis = a*(1-e);
+% periapsis_limit = (mu/(V_inf _limit^2))*(sqrt(1 + ((norm(Delta)*(V_inf _limit^2)/mu)^2)) - 1)
+
+f_delta = acos(periapsis/norm(Delta));
+
+R = (a*(1-(e^2)))*((1 + e.*cos(f)).^-1);
+R_x = R.*cos(-f);
+R_y = R.*sin(-f);
+
+[x,y,z] = sphere ;
+
+% ROTATION MATRIX
+R1 = [cos(Angle1), -sin(Angle1), 0; sin(Angle1), cos(Angle1), 0; 0, 0, 1];
+R2 = [cos(Angle2), 0, -sin(Angle2); 0, 1, 0; sin(Angle2), 0, cos(Angle2)];
+R3 = [1, 0, 0; 0, cos(-angle), -sin(-angle); 0, sin(-angle), cos(-angle)];
+R4 = [cos(-f_delta), -sin(-f_delta), 0; sin(-f_delta), cos(-f_delta), 0; 0, 0, 1];
+
+Rotation = R1*R2*R3*R4;
+
+X1 = R1*X;
+Y1 = R1*Y;
+Z1 = R1*Z;
+
+% quiver3(0, 0, 0, X1(1), X1(2), X1(3), 'y')
+% quiver3(0, 0, 0, Y1(1), Y1(2), Y1(3), 'y')
+% quiver3(0, 0, 0, Z1(1), Z1(2), Z1(3), 'y')
+
+X2 = R1*R2*X;
+Y2 = R1*R2*Y;
+Z2 = R1*R2*Z;
+
+% quiver3(0, 0, 0, X2(1), X2(2), X2(3), 'g')
+% quiver3(0, 0, 0, Y2(1), Y2(2), Y2(3), 'g')
+% quiver3(0, 0, 0, Z2(1), Z2(2), Z2(3), 'g')
+
+X3 = R1*R2*R3*X;
+Y3 = R1*R2*R3*Y;
+Z3 = R1*R2*R3*Z;
+
+% quiver3(0, 0, 0, X3(1), X3(2), X3(3), 'm')
+% quiver3(0, 0, 0, Y3(1), Y3(2), Y3(3), 'm')
+% quiver3(0, 0, 0, Z3(1), Z3(2), Z3(3), 'm')
+
+X4 = R1*R2*R3*R4*X;
+Y4 = R1*R2*R3*R4*Y;
+Z4 = R1*R2*R3*R4*Z;
+
+Periapsis = Rotation*[periapsis; 0; 0];
+
+Hyperbola = Rotation*[R_x; R_y; zeros(1, length(R_x))];
+
+% plot3(Hyperbola(1, :), Hyperbola(2, :), Hyperbola(3, :))
+% quiver3(0, 0, 0, Periapsis(1), Periapsis(2), Periapsis(3), 'y')
+% plot3(Periapsis(1), Periapsis(2), Periapsis(3), '*y')
+
+[x, y, z] = sphere;
+x = r*x;
+y = r*y;
+z = r*z;
+
+F_0 = -acosh((e + cos(f(1)))/(1 + e*cos(f(1))));
+t_p = sqrt((-a^3)/mu)*(e*sinh(F_0) - F_0);
+
+t = zeros(1, length(f));
+for i = 1:length(f)
+    F = -acosh((e + cos(f(i)))/(1 + e*cos(f(i))));
+    t(i) = sqrt((-a^3)/mu)*(e*sinh(F) - F) - t_p;
+end
+
+v_ph = sqrt(mu*((2/R(length(R))) - (1/a)));
+v_c = sqrt(mu*(1/R(length(R))));
+delta_v = v_c - v_ph;
+
+Delta_V = Rotation*[0; -delta_v; 0];
+
+
+%% Plot and Animation
+
+figure
+hold on
+quiver3(0, 0, 0, X4(1), X4(2), X4(3), 'k')
+quiver3(0, 0, 0, Y4(1), Y4(2), Y4(3), 'k')
+quiver3(0, 0, 0, Z4(1), Z4(2), Z4(3), 'k')
+grid on
+% plot3(R_x, R_y, zeros(1, length(R_x)))
+quiver3(0, 0, 0, Delta(1), Delta(2), Delta(3), 'r')
+% quiver3(0, 0, 0, Delta(1), Delta(2), 0, 'r')
+% quiver3(0, 0, periapsis, 0)
+quiver3(0, 0, 0, 2*r, 0, 0, 'b')
+quiver3(0, 0, 0, 0, 2*r, 0, 'b')
+quiver3(0, 0, 0, 0, 0, 2*r, 'b')
+xlabel('X')
+ylabel('Y')
+zlabel('Z')
+view(3)
+plot3(Hyperbola(1, :), Hyperbola(2, :), Hyperbola(3, :))
+quiver3(0, 0, 0, Periapsis(1), Periapsis(2), Periapsis(3), 'y')
+plot3(Periapsis(1), Periapsis(2), Periapsis(3), '*y')
+quiver3(Hyperbola(1, 1), Hyperbola(2, 1), Hyperbola(3, 1), r, 0, 0)
+quiver3(Hyperbola(1, 1), Hyperbola(2, 1), Hyperbola(3, 1), 0, r, 0)
+quiver3(Hyperbola(1, 1), Hyperbola(2, 1), Hyperbola(3, 1), 0, 0, r)
+quiver3(Periapsis(1), Periapsis(2), Periapsis(3), Delta_V(1), Delta_V(2), Delta_V(3))
+% plot stuff
+daspect([1 1 1])
+set(gca,'BoxStyle','full','Box','on')
+set(gca,'color','k')
+%surf(x,y,z)
+[mytext,map]=rgb2ind(planet,256);
+mytext=flipud(mytext);
+% Create the surface.
+surface(x,y,z,'CData',mytext,'FaceColor','texturemap','FaceLighting','phong','EdgeLighting','phong','EdgeColor','none');
+%set the colormap. 
+colormap(map);
+%Create light object
+light('position',[1 2 0 ],'Style','infinite','color',[0.8 0.7 0.8]);
+light('position',[-2 -3 0 ],'color',[0.8 0.7 0.8]);
+
+
